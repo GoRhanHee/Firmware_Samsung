@@ -14,30 +14,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - model: "SM-G991B"
-            csc: "XEO"
-            omc: "OXM"
-            imei: "350261971234566"
           - model: "SM-G991N"
             csc: "KOO"
             omc: "OKR"
             imei: "351376411210155"
-          - model: "SM-G996B"
-            csc: "XEO"
-            omc: "OXM"
-            imei: "352630604603959"
-          - model: "SM-G996N"
+          - model: "SM-G973N"
             csc: "KOO"
             omc: "OKR"
-            imei: "353561330387048"
-          - model: "SM-G998B"
-            csc: "XEO"
-            omc: "OXM"
-            imei: "358625331162091"
-          - model: "SM-G998N"
-            csc: "KOO"
-            omc: "OKR"
-            imei: "352412373875971"
+            imei: "352582101234566"
 
     steps:
       - name: Checkout repo
@@ -162,14 +146,27 @@ jobs:
       - name: Extract vendor partition
         if: env.need_update == 1
         run: |
-          tar xvf ${{ env.ap_tar }} super.img.lz4
-          lz4 -d super.img.lz4 super.img
-          rm -f super.img.lz4
-          simg2img super.img super_raw.img
-          rm -f super.img
-          mv super_raw.img super.img
-          ./tools/lpunpack -p vendor super.img .
-          rm -f super.img
+          tar tf ${{ env.ap_tar }} > ap_list.txt          
+          if grep -q "super.img.lz4" ap_list.txt; then
+            tar xvf ${{ env.ap_tar }} super.img.lz4
+            lz4 -d super.img.lz4 super.img
+            rm -f super.img.lz4
+            simg2img super.img super_raw.img
+            rm -f super.img
+            mv super_raw.img super.img
+            ./tools/lpunpack -p vendor super.img .
+            rm -f super.img
+          elif grep -q "vendor.img.lz4" ap_list.txt; then
+            tar xvf ${{ env.ap_tar }} vendor.img.lz4
+            lz4 -d vendor.img.lz4 vendor.img
+            if img2simg -v vendor.img /dev/null 2>/dev/null; then
+              simg2img vendor.img vendor_raw.img
+              mv -f vendor_raw.img vendor.img
+            fi
+          else
+            echo "No vendor or super partition found in AP tar."
+          fi
+
           [[ -e vendor.img ]] && zip ${{ env.latest_shortversion }}_vendor.zip vendor.img
           [[ -e vendor.img ]] && rm -f vendor.img
 
