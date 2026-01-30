@@ -47,17 +47,12 @@ jobs:
           echo "latest_cscversion=$latest_csc" >> $GITHUB_ENV
           echo "need_update=$need_update" >> $GITHUB_ENV
 
-      - name: Cleanup space (1/2)
-        if: env.need_update == 1
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
+      - name: Free up workflow space
+        run: |
+          curl -L -o util_free_space.sh https://raw.githubusercontent.com/apache/arrow/main/ci/scripts/util_free_space.sh
+          chmod +x util_free_space.sh
+          ./util_free_space.sh
 
-      - name: Cleanup space (2/2)
-        if: env.need_update == 1
-        uses: rokibhasansagar/slimhub_actions@main
-        with:
-          retain: 'compiler_cmake'
 
       - name: Install dependencies
         if: env.need_update == 1
@@ -165,18 +160,7 @@ jobs:
         if: env.need_update == 1
         run: |
           tar tf ${{ env.ap_tar }} > ap_list.txt          
-          if grep -q "super.img.lz4" ap_list.txt; then
-            tar xvf ${{ env.ap_tar }} super.img.lz4
-            lz4 -d super.img.lz4 super.img
-            rm -f super.img.lz4
-            simg2img super.img super_raw.img
-            rm -f super.img
-            mv super_raw.img super.img
-            ./tools/lpunpack -p vendor super.img .
-            if ./tools/lpunpack --list super.img 2>/dev/null | grep -q "vendor_dlkm"; then
-              ./tools/lpunpack -p vendor_dlkm super.img .
-            fi
-            rm -f super.img
+          
           elif grep -q "vendor.img.lz4" ap_list.txt; then
             tar xvf ${{ env.ap_tar }} vendor.img.lz4
             lz4 -d vendor.img.lz4 vendor.img
