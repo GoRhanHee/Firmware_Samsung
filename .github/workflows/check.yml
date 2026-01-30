@@ -125,9 +125,15 @@ jobs:
       - name: Extract kernel images
         if: env.need_update == 1
         env:
-          FILES: boot.img.lz4 dtbo.img.lz4 vbmeta.img.lz4
+          FILES: boot.img.lz4 dtbo.img.lz4
         run: |
           for file in $FILES; do tar xvf ${{ env.ap_tar }} ${file}; done
+          if tar -tf ${{ env.ap_tar }} vendor_boot.img.lz4 > /dev/null 2>&1; then
+            tar xvf ${{ env.ap_tar }} vendor_boot.img.lz4
+          fi
+          if tar -tf ${{ env.ap_tar }} vbmeta.img.lz4 > /dev/null 2>&1; then
+            tar xvf ${{ env.ap_tar }} vbmeta.img.lz4
+          fi
           tar cvf ${{ env.latest_shortversion }}_kernel.tar *.lz4
           rm -f *.lz4
 
@@ -140,14 +146,22 @@ jobs:
       - name: Generate patched vbmeta
         if: env.need_update == 1
         run: |
-          tar xvf ${{ env.ap_tar }} vbmeta.img.lz4
+          if tar -tf ${{ env.ap_tar }} vbmeta.img.lz4 > /dev/null 2>&1; then
+            tar xvf ${{ env.ap_tar }} vbmeta.img.lz4
+          elif tar -tf ${{ env.bl_tar }} vbmeta.img.lz4 > /dev/null 2>&1; then
+            tar xvf ${{ env.bl_tar }} vbmeta.img.lz4
+          fi
+          if [ ! -f vbmeta.img.lz4 ]; then
+            echo "vbmeta.img.lz4 not found in Stock Firmware. Skipping patch."
+            exit 0
+          fi
           lz4 -d vbmeta.img.lz4 vbmeta.img
           rm -f vbmeta.img.lz4
           printf "$(printf '\\x%02X' 3)" | dd of="vbmeta.img" bs=1 seek=123 count=1 conv=notrunc &> /dev/null
           tar cvf ${{ env.latest_shortversion }}_patched_vbmeta.tar vbmeta.img
           rm -f vbmeta.img
 
-      - name: Extract vendor and vendor_boot and vendor_dlkm partition
+      - name: Extract vendor and vendor_dlkm partition
         if: env.need_update == 1
         run: |
           tar tf ${{ env.ap_tar }} > ap_list.txt          
@@ -171,20 +185,9 @@ jobs:
               mv -f vendor_raw.img vendor.img
             fi          
           fi
-
-          if grep -q "vendor_boot.img.lz4" ap_list.txt; then
-            echo "vendor_boot.img.lz4 found. Extracting..."
-            tar xvf ${{ env.ap_tar }} vendor_boot.img.lz4
-            lz4 -d vendor_boot.img.lz4 vendor_boot.img && rm -f vendor_boot.img.lz4
-            if img2simg -v vendor_boot.img /dev/null 2>/dev/null; then
-              simg2img vendor_boot.img v_boot_raw.img && mv -f v_boot_raw.img vendor_boot.img
-            fi
-          fi
-
+    
           [[ -e vendor.img ]] && zip ${{ env.latest_shortversion }}_vendor.zip vendor.img
-          [[ -e vendor.img ]] && rm -f vendor.img
-          [[ -e vendor_boot.img ]] && zip ${{ env.latest_shortversion }}_vendor_boot.zip vendor_boot.img
-          [[ -e vendor_boot.img ]] && rm -f vendor_boot.img
+          [[ -e vendor.img ]] && rm -f vendor.img        
           [[ -e vendor_dlkm.img ]] && zip ${{ env.latest_shortversion }}_vendor_dlkm.zip vendor_dlkm.img
           [[ -e vendor_dlkm.img ]] && rm -f vendor_dlkm.img                  
 
@@ -223,3 +226,4 @@ jobs:
             ${{ env.pit_file }}
             ${{ env.latest_shortversion }}_patched_vbmeta.tar
             ${{ env.latest_shortversion }}_vendor.zip
+            ${{ env.latest_shortversion }}_vendor_dlkm.zip
