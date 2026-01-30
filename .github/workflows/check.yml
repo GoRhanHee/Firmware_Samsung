@@ -160,7 +160,18 @@ jobs:
         if: env.need_update == 1
         run: |
           tar tf ${{ env.ap_tar }} > ap_list.txt          
-          
+          if grep -q "super.img.lz4" ap_list.txt; then
+            tar xvf ${{ env.ap_tar }} super.img.lz4
+            lz4 -d super.img.lz4 super.img
+            rm -f super.img.lz4
+            simg2img super.img super_raw.img
+            rm -f super.img
+            mv super_raw.img super.img
+            ./tools/lpunpack -p vendor super.img .
+            if ./tools/lpunpack --list super.img 2>/dev/null | grep -q "vendor_dlkm"; then
+              ./tools/lpunpack -p vendor_dlkm super.img .
+            fi
+            rm -f super.img
           elif grep -q "vendor.img.lz4" ap_list.txt; then
             tar xvf ${{ env.ap_tar }} vendor.img.lz4
             lz4 -d vendor.img.lz4 vendor.img
