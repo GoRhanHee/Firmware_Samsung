@@ -22,6 +22,10 @@ jobs:
             csc: "KOO"
             omc: "OKR"
             imei: "352582101234566"
+          - model: "SM-F946N"
+            csc: "KOO"
+            omc: "OKR"
+            imei: "350443701234567"            
 
     steps:
       - name: Checkout repo
@@ -143,7 +147,7 @@ jobs:
           tar cvf ${{ env.latest_shortversion }}_patched_vbmeta.tar vbmeta.img
           rm -f vbmeta.img
 
-      - name: Extract vendor partition
+      - name: Extract vendor and vendor_boot and vendor_dlkm partition
         if: env.need_update == 1
         run: |
           tar tf ${{ env.ap_tar }} > ap_list.txt          
@@ -155,6 +159,9 @@ jobs:
             rm -f super.img
             mv super_raw.img super.img
             ./tools/lpunpack -p vendor super.img .
+            if ./tools/lpunpack --list super.img 2>/dev/null | grep -q "vendor_dlkm"; then
+              ./tools/lpunpack -p vendor_dlkm super.img .
+            fi
             rm -f super.img
           elif grep -q "vendor.img.lz4" ap_list.txt; then
             tar xvf ${{ env.ap_tar }} vendor.img.lz4
@@ -162,13 +169,24 @@ jobs:
             if img2simg -v vendor.img /dev/null 2>/dev/null; then
               simg2img vendor.img vendor_raw.img
               mv -f vendor_raw.img vendor.img
+            fi          
+          fi
+
+          if grep -q "vendor_boot.img.lz4" ap_list.txt; then
+            echo "vendor_boot.img.lz4 found. Extracting..."
+            tar xvf ${{ env.ap_tar }} vendor_boot.img.lz4
+            lz4 -d vendor_boot.img.lz4 vendor_boot.img && rm -f vendor_boot.img.lz4
+            if img2simg -v vendor_boot.img /dev/null 2>/dev/null; then
+              simg2img vendor_boot.img v_boot_raw.img && mv -f v_boot_raw.img vendor_boot.img
             fi
-          else
-            echo "No vendor or super partition found in AP tar."
           fi
 
           [[ -e vendor.img ]] && zip ${{ env.latest_shortversion }}_vendor.zip vendor.img
           [[ -e vendor.img ]] && rm -f vendor.img
+          [[ -e vendor_boot.img ]] && zip ${{ env.latest_shortversion }}_vendor_boot.zip vendor_boot.img
+          [[ -e vendor_boot.img ]] && rm -f vendor_boot.img
+          [[ -e vendor_dlkm.img ]] && zip ${{ env.latest_shortversion }}_vendor_dlkm.zip vendor_dlkm.img
+          [[ -e vendor_dlkm.img ]] && rm -f vendor_dlkm.img                  
 
       - name: Update current version
         if: env.need_update == 1
