@@ -168,9 +168,9 @@ jobs:
             simg2img super.img super_raw.img
             mv -f super_raw.img super.img             
             ./tools/lpunpack -p vendor super.img .
-            if ./tools/lpunpack --list super.img 2>/dev/null | grep -q "vendor_dlkm"; then
+            if [ ${{ matrix.model }} == "SM-F946N" ]; then
               ./tools/lpunpack -p vendor_dlkm super.img .
-            fi
+            fi              
             rm -f super.img
           elif grep -q "vendor.img.lz4" ap_list.txt; then
             tar xvf ${{ env.ap_tar }} vendor.img.lz4
