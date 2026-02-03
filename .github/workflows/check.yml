@@ -165,10 +165,8 @@ jobs:
             rm -f ${{ env.ap_tar }}
             lz4 -d super.img.lz4 super.img
             rm -f super.img.lz4
-            if img2simg -v super.img /dev/null 2>/dev/null; then
-              simg2img super.img super_raw.img
-              mv -f super_raw.img super.img
-            fi              
+            simg2img super.img super_raw.img
+            mv -f super_raw.img super.img             
             ./tools/lpunpack -p vendor super.img .
             if ./tools/lpunpack --list super.img 2>/dev/null | grep -q "vendor_dlkm"; then
               ./tools/lpunpack -p vendor_dlkm super.img .
