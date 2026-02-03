@@ -178,8 +178,7 @@ jobs:
             if img2simg -v vendor.img /dev/null 2>/dev/null; then
               simg2img vendor.img vendor_raw.img
               mv -f vendor_raw.img vendor.img
-            fi
-            rm -f super.img          
+            fi         
           fi
           if [[ -e vendor.img ]]; then
             zip ${{ env.latest_shortversion }}_vendor.zip vendor.img
@@ -217,6 +216,7 @@ jobs:
           body_path: versions.txt
           tag_name: "${{ env.latest_shortversion }}_${{ matrix.csc }}_${{ matrix.omc }}"
           name: "${{ env.latest_shortversion }} - ${{ matrix.model }} - ${{ matrix.csc }} - ${{ matrix.omc }}"
+          fail_on_unmatched_files: false
           files: |
             ${{ env.bl_tar }}
             ${{ env.cp_tar }}
