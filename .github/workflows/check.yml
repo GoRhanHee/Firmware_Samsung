@@ -76,7 +76,7 @@ jobs:
           # https://github.com/ExtremeXT/ExtremeROM/blob/v2.6.1/scripts/download_fw.sh#L169-L192
           C=1
           while true; do
-              samloader -m ${{ matrix.model }} -r ${{ matrix.csc }} -i ${{ matrix.imei }} download -O "${{ matrix.model }}_${{ matrix.csc }}"
+              samloader -m ${{ matrix.model }} -r ${{ matrix.csc }} -i ${{ matrix.imei }} download -O "${{ matrix.model }}_${{ matrix.csc }}" || true
               ZIP_FILE="$(find "${{ matrix.model }}_${{ matrix.csc }}" -name "*.zip" | sort -r | head -n 1)"
               if [[ ! "$ZIP_FILE" ]] || [[ ! -f "$ZIP_FILE" ]]; then
                   if [[ "$C" -gt 10 ]]; then
@@ -169,7 +169,6 @@ jobs:
               simg2img super.img super_raw.img
               mv -f super_raw.img super.img
             fi              
-            mv super_raw.img super.img
             ./tools/lpunpack -p vendor super.img .
             if ./tools/lpunpack --list super.img 2>/dev/null | grep -q "vendor_dlkm"; then
               ./tools/lpunpack -p vendor_dlkm super.img .
