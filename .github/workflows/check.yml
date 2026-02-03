@@ -162,10 +162,13 @@ jobs:
           tar tf ${{ env.ap_tar }} > ap_list.txt          
           if grep -q "super.img.lz4" ap_list.txt; then
             tar xvf ${{ env.ap_tar }} super.img.lz4
+            rm -f ${{ env.ap_tar }}
             lz4 -d super.img.lz4 super.img
             rm -f super.img.lz4
-            simg2img super.img super_raw.img
-            rm -f super.img
+            if img2simg -v super.img /dev/null 2>/dev/null; then
+              simg2img super.img super_raw.img
+              mv -f super_raw.img super.img
+            fi              
             mv super_raw.img super.img
             ./tools/lpunpack -p vendor super.img .
             if ./tools/lpunpack --list super.img 2>/dev/null | grep -q "vendor_dlkm"; then
