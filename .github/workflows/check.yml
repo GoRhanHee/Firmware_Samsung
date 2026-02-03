@@ -178,13 +178,17 @@ jobs:
             if img2simg -v vendor.img /dev/null 2>/dev/null; then
               simg2img vendor.img vendor_raw.img
               mv -f vendor_raw.img vendor.img
-            fi          
+            fi
+            rm -f super.img          
           fi
-          rm -f super.img
-          [[ -e vendor.img ]] && zip ${{ env.latest_shortversion }}_vendor.zip vendor.img
-          [[ -e vendor.img ]] && rm -f vendor.img        
-          [[ -e vendor_dlkm.img ]] && zip ${{ env.latest_shortversion }}_vendor_dlkm.zip vendor_dlkm.img
-          [[ -e vendor_dlkm.img ]] && rm -f vendor_dlkm.img                  
+          if [[ -e vendor.img ]]; then
+            zip ${{ env.latest_shortversion }}_vendor.zip vendor.img
+            rm -f vendor.img
+          fi
+          if [[ -e vendor_dlkm.img ]]; then
+            zip ${{ env.latest_shortversion }}_vendor_dlkm.zip vendor_dlkm.img
+            rm -f vendor_dlkm.img
+          fi                         
 
       - name: Update current version
         if: env.need_update == 1
