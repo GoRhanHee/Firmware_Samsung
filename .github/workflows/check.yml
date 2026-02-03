@@ -180,7 +180,7 @@ jobs:
               mv -f vendor_raw.img vendor.img
             fi          
           fi
-    
+          rm -f super.img
           [[ -e vendor.img ]] && zip ${{ env.latest_shortversion }}_vendor.zip vendor.img
           [[ -e vendor.img ]] && rm -f vendor.img        
           [[ -e vendor_dlkm.img ]] && zip ${{ env.latest_shortversion }}_vendor_dlkm.zip vendor_dlkm.img
