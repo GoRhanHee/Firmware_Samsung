@@ -18,14 +18,17 @@ jobs:
             csc: "KOO"
             omc: "OKR"
             imei: "351376411210155"
+            gki: Non-GKI
           - model: "SM-G973N"
             csc: "KOO"
             omc: "OKR"
             imei: "352582101234566"
+            gki: Non-GKI
           - model: "SM-F946N"
             csc: "KOO"
             omc: "OKR"
-            imei: "350443701234567"            
+            imei: "350443701234567"
+            gki: GKI            
 
     steps:
       - name: Checkout repo
@@ -117,7 +120,7 @@ jobs:
           echo CSC version: $version_csc >> versions.txt
           echo Modem version: $version_modem >> versions.txt
 
-      - name: Extract kernel images
+      - name: Extract Stock Kernel Images
         if: env.need_update == 1
         env:
           FILES: boot.img.lz4 dtbo.img.lz4
@@ -156,19 +159,29 @@ jobs:
           tar cvf ${{ env.latest_shortversion }}_patched_vbmeta.tar vbmeta.img
           rm -f vbmeta.img
 
+      - name: Extract init_boot.img (for Magisk, KernelSU LKM)
+        if: env.need_update == 1      
+        run: |
+          if tar -tf ${{ env.ap_tar }} init_boot.img.lz4 > /dev/null 2>&1; then
+            tar xvf ${{ env.ap_tar }} init_boot.img.lz4
+            lz4 -d init_boot.img.lz4 init_boot.img
+            rm -f init_boot.img.lz4          
+            tar cvf ${{ env.latest_shortversion }}_init_boot.tar init_boot.img
+            rm -f init_boot.img
+          fi  
+
       - name: Extract vendor and vendor_dlkm partition
         if: env.need_update == 1
         run: |
           tar tf ${{ env.ap_tar }} > ap_list.txt          
           if grep -q "super.img.lz4" ap_list.txt; then
             tar xvf ${{ env.ap_tar }} super.img.lz4
-            rm -f ${{ env.ap_tar }}
             lz4 -d super.img.lz4 super.img
             rm -f super.img.lz4
             simg2img super.img super_raw.img
             mv -f super_raw.img super.img             
             ./tools/lpunpack -p vendor super.img .
-            if [ ${{ matrix.model }} == "SM-F946N" ]; then
+            if [ ${{ matrix.gki }} == "GKI" ]; then
               ./tools/lpunpack -p vendor_dlkm super.img .
             fi              
             rm -f super.img
@@ -224,5 +237,6 @@ jobs:
             ${{ env.latest_shortversion }}_kernel.tar
             ${{ env.pit_file }}
             ${{ env.latest_shortversion }}_patched_vbmeta.tar
+            ${{ env.latest_shortversion }}_init_boot.tar
             ${{ env.latest_shortversion }}_vendor.zip
             ${{ env.latest_shortversion }}_vendor_dlkm.zip
