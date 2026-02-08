@@ -181,6 +181,7 @@ jobs:
           tar tf ${{ env.ap_tar }} > ap_list.txt          
           if grep -q "super.img.lz4" ap_list.txt; then
             tar xvf ${{ env.ap_tar }} super.img.lz4
+            rm -f ${{ env.ap_tar }}
             lz4 -d super.img.lz4 super.img
             rm -f super.img.lz4
             simg2img super.img super_raw.img
