@@ -175,6 +175,15 @@ jobs:
             rm -f init_boot.img
           fi  
 
+      - name: Extract recovery.img
+        if: env.need_update == 1      
+        run: |
+          tar xvf ${{ env.ap_tar }} recovery.img.lz4
+          lz4 -d recovery.img.lz4 recovery.img
+          rm -f recovery.img.lz4          
+          tar cvf ${{ env.latest_shortversion }}_recovery.tar recovery.img
+          rm -f recovery.img
+
       - name: Extract vendor and vendor_dlkm partition
         if: env.need_update == 1
         run: |
