@@ -38,7 +38,12 @@ jobs:
             csc: "KOO"
             omc: "OKR"
             imei: "355347581234560"
-            gki: Non-GKI            
+            gki: Non-GKI
+          - model: "SM-A516N"
+            csc: "KOO"
+            omc: "OKR"
+            imei: "354485111234568"
+            gki: Non-GKI                 
 
     steps:
       - name: Checkout repo
