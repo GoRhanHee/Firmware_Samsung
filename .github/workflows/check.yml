@@ -37,7 +37,7 @@ jobs:
           - model: "SM-N981N"
             csc: "KOO"
             omc: "OKR"
-            imei: "350680831234567"
+            imei: "355347581234560"
             gki: Non-GKI            
 
     steps:
