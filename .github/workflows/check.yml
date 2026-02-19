@@ -39,6 +39,11 @@ jobs:
             omc: "OKR"
             imei: "355347581234560"
             gki: Non-GKI
+          - model: "SM-N986N"
+            csc: "KOO"
+            omc: "OKR"
+            imei: "355857111234567"
+            gki: Non-GKI  
           - model: "SM-A516N"
             csc: "KOO"
             omc: "OKR"
