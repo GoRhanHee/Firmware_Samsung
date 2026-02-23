@@ -58,12 +58,7 @@ jobs:
             csc: "KOO"
             omc: "OKR"
             imei: "350865891234561"
-            gki: GKI 
-          - model: "SM-E556B"
-            csc: "INS"
-            omc: "OXM"
-            imei: "358298871234561"
-            gki: GKI             
+            gki: GKI            
 
     steps:
       - name: Checkout repo
