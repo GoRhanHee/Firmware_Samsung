@@ -56,7 +56,7 @@ jobs:
           - model: "SM-G988N"
             csc: "KOO"
             omc: "OKR"
-            imei: "352651111234567"  
+            imei: "352649111234561"  
             gki: Non-GKI      
           - model: "SM-S906N"
             csc: "KOO"
