@@ -193,6 +193,16 @@ jobs:
           tar cvf ${{ env.latest_shortversion }}_patched_vbmeta.tar vbmeta.img
           rm -f vbmeta.img
 
+      - name: Generate patched fastboot recovery
+        if: env.need_update == 1
+        run: |
+          tar xvf ${{ env.ap_tar }} recovery.img.lz4
+          lz4 -d recovery.img.lz4 recovery.img
+          git clone https://github.com/engineer4t/fastboot-patcher.git && mv recovery.img ./fastboot-patcher/ && cd fastboot-patcher && ./patcher-minimal
+          mv output/output.img ../recovery.img && cd ..
+          tar cvf ${{ env.latest_shortversion }}_patched_fastboot.tar recovery.img
+          rm -rf fastboot-patcher *.lz4
+
       - name: Extract init_boot.img (for Magisk, KernelSU LKM)
         if: env.need_update == 1      
         run: |
