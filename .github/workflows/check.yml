@@ -13,12 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - model: "SM-G991N"
-            csc: "KOO"
-            omc: "OKR"
-            imei: "351376411210155"
-            gki: Non-GKI
+        include:          
           - model: "SM-G973N"
             csc: "KOO"
             omc: "OKR"
@@ -28,41 +23,12 @@ jobs:
             csc: "KOO"
             omc: "OKR"
             imei: "350443701234567"
-            gki: GKI 
-          - model: "SM-S911N"
-            csc: "KOO"
-            omc: "OKR"
-            imei: "351357511234568"
-            gki: GKI    
-          - model: "SM-N981N"
-            csc: "KOO"
-            omc: "OKR"
-            imei: "355347581234560"
-            gki: Non-GKI
+            gki: GKI              
           - model: "SM-N986N"
             csc: "KOO"
             omc: "OKR"
             imei: "355857111234567"
             gki: Non-GKI  
-          - model: "SM-A516N"
-            csc: "KOO"
-            omc: "OKR"
-            imei: "354485111234568"
-            gki: Non-GKI    
-          - model: "SM-G986N"
-            csc: "KOO"
-            omc: "OKR"
-            imei: "354205111234560"
-          - model: "SM-G988N"
-            csc: "KOO"
-            omc: "OKR"
-            imei: "352649111234561"  
-            gki: Non-GKI      
-          - model: "SM-S906N"
-            csc: "KOO"
-            omc: "OKR"
-            imei: "350865891234561"
-            gki: GKI            
 
     steps:
       - name: Checkout repo
@@ -213,15 +179,6 @@ jobs:
             tar cvf ${{ env.latest_shortversion }}_init_boot.tar init_boot.img
             rm -f init_boot.img
           fi  
-
-      - name: Extract recovery.img
-        if: env.need_update == 1      
-        run: |
-          tar xvf ${{ env.ap_tar }} recovery.img.lz4
-          lz4 -d recovery.img.lz4 recovery.img
-          rm -f recovery.img.lz4          
-          tar cvf ${{ env.latest_shortversion }}_recovery.tar recovery.img
-          rm -f recovery.img
 
       - name: Extract vendor and vendor_dlkm partition
         if: env.need_update == 1
