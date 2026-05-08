@@ -27,7 +27,7 @@ jobs:
           - model: "SM-S916N"
             csc: "KOO"
             omc: "OKR"
-            imei: "350806071234567"
+            imei: "350309331234568"
             gki: GKI
           - model: "SM-S918N"
             csc: "KOO"
