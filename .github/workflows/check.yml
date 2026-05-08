@@ -14,21 +14,26 @@ jobs:
       fail-fast: false
       matrix:
         include:          
-          - model: "SM-G973N"
-            csc: "KOO"
-            omc: "OKR"
-            imei: "352582101234566"
-            gki: Non-GKI
           - model: "SM-F946N"
             csc: "KOO"
             omc: "OKR"
             imei: "350443701234567"
-            gki: GKI              
-          - model: "SM-N986N"
+            gki: GKI 
+          - model: "SM-S911N"
             csc: "KOO"
             omc: "OKR"
-            imei: "355857111234567"
-            gki: Non-GKI  
+            imei: "351357511234568"
+            gki: GKI
+          - model: "SM-S916N"
+            csc: "KOO"
+            omc: "OKR"
+            imei: "350806071234567"
+            gki: GKI
+          - model: "SM-S918N"
+            csc: "KOO"
+            omc: "OKR"
+            imei: "351747951234567"
+            gki: GKI                   
 
     steps:
       - name: Checkout repo
