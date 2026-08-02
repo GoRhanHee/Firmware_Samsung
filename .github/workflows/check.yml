@@ -6,6 +6,9 @@ on:
     - cron: "0 12 * * *"
   push:
 
+permissions:
+  contents: write
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -18,22 +21,18 @@ jobs:
             csc: "KOO"
             omc: "OKR"
             imei: "350443701234567"
-            gki: GKI 
           - model: "SM-S911N"
             csc: "KOO"
             omc: "OKR"
             imei: "351357511234568"
-            gki: GKI
           - model: "SM-S916N"
             csc: "KOO"
             omc: "OKR"
             imei: "350309331234568"
-            gki: GKI
           - model: "SM-S918N"
             csc: "KOO"
             omc: "OKR"
             imei: "351747951234567"
-            gki: GKI                   
 
     steps:
       - name: Checkout repo
@@ -44,12 +43,11 @@ jobs:
       - name: Compare latest version with current version
         run: |
           need_update=0
-          latest=`curl --retry 5 --retry-delay 5 http://fota-cloud-dn.ospserver.net/firmware/${{ matrix.csc }}/${{ matrix.model }}/version.xml | grep latest | sed 's/^[^>]*>//' | sed 's/<.*//'`
-          latest_short=`echo $latest | cut -d'/' -f1`
-          latest_csc=`echo $latest | cut -d'/' -f2`
-          latest_modem=`echo $latest | cut -d'/' -f3`
-          current=`cat current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}` || need_update=1
-          [[ $latest != $current ]] && need_update=1
+          latest="$(curl --fail --retry 5 --retry-delay 5 --silent http://fota-cloud-dn.ospserver.net/firmware/${{ matrix.csc }}/${{ matrix.model }}/version.xml | grep latest | sed 's/^[^>]*>//' | sed 's/<.*//')"
+          latest_short="$(echo "$latest" | cut -d'/' -f1)"
+          latest_csc="$(echo "$latest" | cut -d'/' -f2)"
+          current="$(cat "current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}" 2>/dev/null || true)"
+          [[ "$latest" != "$current" ]] && need_update=1
           echo "latest_version=$latest" >> $GITHUB_ENV
           echo "latest_shortversion=$latest_short" >> $GITHUB_ENV
           echo "latest_cscversion=$latest_csc" >> $GITHUB_ENV
@@ -66,7 +64,7 @@ jobs:
         if: env.need_update == 1
         run: |
           sudo apt-get update
-          sudo apt-get install -y liblz4-tool zip android-sdk-libsparse-utils f2fs-tools linux-modules-extra-$(uname -r) python3 python3-venv unzip
+          sudo apt-get install -y liblz4-tool zip android-sdk-libsparse-utils python3 python3-venv unzip
 
       - name: Install samloader
         if: env.need_update == 1
@@ -97,143 +95,175 @@ jobs:
                   break
               fi
           done
-          cd "${{ matrix.model }}_${{ matrix.csc }}"
-          unzip "*.zip" 
-          rm -rvf "*.zip"
-          cd ..
+          unzip -q "$ZIP_FILE" -d "${{ matrix.model }}_${{ matrix.csc }}/extracted"
+          rm -f "$ZIP_FILE"
           deactivate
           rm -rf py_env
 
       - name: Get path of files
         if: env.need_update == 1
         run: |
-          echo "ap_tar=`find -name AP*`" >> $GITHUB_ENV
-          echo "bl_tar=`find -name BL*`" >> $GITHUB_ENV
-          echo "cp_tar=`find -name CP*`" >> $GITHUB_ENV
-          echo "csc_tar=`find -name CSC*`" >> $GITHUB_ENV
-          echo "home_csc_tar=`find -name HOME_CSC*`" >> $GITHUB_ENV
+          ap_tar="$(find . -type f -name 'AP*' -print -quit)"
+          bl_tar="$(find . -type f -name 'BL*' -print -quit)"
+          [[ -n "$ap_tar" ]] || { echo "AP archive not found"; exit 1; }
+          echo "ap_tar=$ap_tar" >> "$GITHUB_ENV"
+          echo "bl_tar=$bl_tar" >> "$GITHUB_ENV"
 
       - name: Check downloaded firmware version
         if: env.need_update == 1
         run: |
-          version_short=`echo ${{ env.ap_tar }} | cut -d'_' -f3`
-          version_csc=`echo ${{ env.csc_tar }} | cut -d'_' -f4`
-          version_modem=`echo ${{ env.cp_tar }} | cut -d'_' -f3`
-          [[ $version_short == ${{ env.latest_shortversion }} ]]
-          [[ $version_csc == ${{ env.latest_cscversion }} ]]
-          echo PDA version: $version_short > versions.txt
-          echo CSC version: $version_csc >> versions.txt
-          echo Modem version: $version_modem >> versions.txt
+          version_short="$(basename "${{ env.ap_tar }}" | cut -d'_' -f3)"
+          [[ "$version_short" == "${{ env.latest_shortversion }}" ]]
+          echo "PDA version: $version_short" > versions.txt
 
-      - name: Extract Stock Kernel Images
+      - name: Extract release images
         if: env.need_update == 1
         env:
-          FILES: boot.img.lz4 dtbo.img.lz4
+          AP_TAR: ${{ env.ap_tar }}
+          BL_TAR: ${{ env.bl_tar }}
         run: |
-          for file in $FILES; do tar xvf ${{ env.ap_tar }} ${file}; done
-          if tar -tf ${{ env.ap_tar }} vendor_boot.img.lz4 > /dev/null 2>&1; then
-            tar xvf ${{ env.ap_tar }} vendor_boot.img.lz4
+          set -euo pipefail
+
+          archive_member() {
+            local archive="$1"
+            local wanted="$2"
+            tar -tf "$archive" | awk -v wanted="$wanted" '$0 == wanted || $0 ~ ("/" wanted "$") { print; exit }'
+          }
+
+          extract_image_from_archive() {
+            local archive="$1"
+            local image="$2"
+            local member
+
+            [[ -n "$archive" && -f "$archive" ]] || return 1
+
+            member="$(archive_member "$archive" "${image}.lz4")"
+            if [[ -n "$member" ]]; then
+              tar -xOf "$archive" "$member" > "${image}.lz4"
+              lz4 -d "${image}.lz4" "$image"
+              rm -f "${image}.lz4"
+              return 0
+            fi
+
+            member="$(archive_member "$archive" "$image")"
+            if [[ -n "$member" ]]; then
+              tar -xOf "$archive" "$member" > "$image"
+              return 0
+            fi
+
+            return 1
+          }
+
+          extract_image() {
+            local image="$1"
+
+            if extract_image_from_archive "$AP_TAR" "$image" || extract_image_from_archive "$BL_TAR" "$image"; then
+              return 0
+            fi
+
+            echo "::warning::${image} was not found in the downloaded firmware"
+          }
+
+          for image in boot.img dtbo.img init_boot.img recovery.img vendor_boot.img system.img vendor.img vendor_dlkm.img system_dlkm.img; do
+            extract_image "$image"
+          done
+
+          if ! extract_image_from_archive "$BL_TAR" vbmeta.img && ! extract_image_from_archive "$AP_TAR" vbmeta.img; then
+            echo "::warning::vbmeta.img was not found in the downloaded firmware"
           fi
-          if tar -tf ${{ env.ap_tar }} vbmeta.img.lz4 > /dev/null 2>&1; then
-            tar xvf ${{ env.ap_tar }} vbmeta.img.lz4
-          fi
-          tar cvf ${{ env.latest_shortversion }}_kernel.tar *.lz4
-          rm -f *.lz4
 
-      - name: Extract PIT file
+      - name: Extract dynamic partitions
         if: env.need_update == 1
+        env:
+          AP_TAR: ${{ env.ap_tar }}
         run: |
-          tar --wildcards --exclude='*/*' -xvf ${{ env.csc_tar }} '*.pit'
-          echo "pit_file=`find -name *.pit`" >> $GITHUB_ENV
+          set -euo pipefail
 
-      - name: Generate patched vbmeta
-        if: env.need_update == 1
-        run: |
-          if tar -tf ${{ env.ap_tar }} vbmeta.img.lz4 > /dev/null 2>&1; then
-            tar xvf ${{ env.ap_tar }} vbmeta.img.lz4
-          elif tar -tf ${{ env.bl_tar }} vbmeta.img.lz4 > /dev/null 2>&1; then
-            tar xvf ${{ env.bl_tar }} vbmeta.img.lz4
-          fi
-          if [ ! -f vbmeta.img.lz4 ]; then
-            echo "vbmeta.img.lz4 not found in Stock Firmware. Skipping patch."
-            exit 0
-          fi
-          lz4 -d vbmeta.img.lz4 vbmeta.img
-          rm -f vbmeta.img.lz4
-          printf "$(printf '\\x%02X' 3)" | dd of="vbmeta.img" bs=1 seek=123 count=1 conv=notrunc &> /dev/null
-          tar cvf ${{ env.latest_shortversion }}_patched_vbmeta.tar vbmeta.img
-          rm -f vbmeta.img
+          archive_member() {
+            local wanted="$1"
+            tar -tf "$AP_TAR" | awk -v wanted="$wanted" '$0 == wanted || $0 ~ ("/" wanted "$") { print; exit }'
+          }
 
-      - name: Generate patched fastboot recovery
-        if: env.need_update == 1
-        run: |
-          tar xvf ${{ env.ap_tar }} recovery.img.lz4
-          lz4 -d recovery.img.lz4 recovery.img
-          git clone https://github.com/engineer4t/fastboot-patcher.git && mv recovery.img ./fastboot-patcher/ && cd fastboot-patcher && ./patcher-minimal
-          mv output/output.img ../recovery.img && cd ..
-          tar cvf ${{ env.latest_shortversion }}_patched_fastboot.tar recovery.img
-          rm -rf fastboot-patcher *.lz4
-
-      - name: Extract init_boot.img (for Magisk, KernelSU LKM)
-        if: env.need_update == 1      
-        run: |
-          if tar -tf ${{ env.ap_tar }} init_boot.img.lz4 > /dev/null 2>&1; then
-            tar xvf ${{ env.ap_tar }} init_boot.img.lz4
-            lz4 -d init_boot.img.lz4 init_boot.img
-            rm -f init_boot.img.lz4          
-            tar cvf ${{ env.latest_shortversion }}_init_boot.tar init_boot.img
-            rm -f init_boot.img
-          fi  
-
-      - name: Extract vendor and vendor_dlkm partition
-        if: env.need_update == 1
-        run: |
-          tar tf ${{ env.ap_tar }} > ap_list.txt          
-          if grep -q "super.img.lz4" ap_list.txt; then
-            tar xvf ${{ env.ap_tar }} super.img.lz4
-            rm -f ${{ env.ap_tar }}
+          super_member="$(archive_member super.img.lz4)"
+          if [[ -n "$super_member" ]]; then
+            tar -xOf "$AP_TAR" "$super_member" > super.img.lz4
             lz4 -d super.img.lz4 super.img
             rm -f super.img.lz4
-            simg2img super.img super_raw.img
-            mv -f super_raw.img super.img             
-            ./tools/lpunpack -p vendor super.img .
-            if [ ${{ matrix.gki }} == "GKI" ]; then
-              ./tools/lpunpack -p vendor_dlkm super.img .
-            fi              
+
+            if simg2img super.img super.raw.img >/dev/null 2>&1; then
+              mv -f super.raw.img super.img
+            else
+              rm -f super.raw.img
+            fi
+
+            for partition in system vendor vendor_dlkm system_dlkm; do
+              if [[ ! -f "${partition}.img" ]] && ! ./tools/lpunpack -p "$partition" super.img .; then
+                echo "::warning::${partition}.img was not found in super.img"
+              fi
+            done
             rm -f super.img
-          elif grep -q "vendor.img.lz4" ap_list.txt; then
-            tar xvf ${{ env.ap_tar }} vendor.img.lz4
-            lz4 -d vendor.img.lz4 vendor.img
-            if img2simg -v vendor.img /dev/null 2>/dev/null; then
-              simg2img vendor.img vendor_raw.img
-              mv -f vendor_raw.img vendor.img
-            fi         
           fi
-          if [[ -e vendor.img ]]; then
-            zip ${{ env.latest_shortversion }}_vendor.zip vendor.img
-            rm -f vendor.img
-          fi
-          if [[ -e vendor_dlkm.img ]]; then
-            zip ${{ env.latest_shortversion }}_vendor_dlkm.zip vendor_dlkm.img
-            rm -f vendor_dlkm.img
-          fi                         
+
+          normalize_sparse() {
+            local image="$1"
+            local raw_image="${image%.img}.raw.img"
+
+            [[ -f "$image" ]] || return 0
+            if simg2img "$image" "$raw_image" >/dev/null 2>&1; then
+              mv -f "$raw_image" "$image"
+            else
+              rm -f "$raw_image"
+            fi
+          }
+
+          normalize_sparse system.img
+          normalize_sparse vendor.img
+          normalize_sparse vendor_dlkm.img
+          normalize_sparse system_dlkm.img
+
+      - name: Validate and package release assets
+        if: env.need_update == 1
+        run: |
+          set -euo pipefail
+
+          required_images=(
+            boot.img
+            dtbo.img
+            init_boot.img
+            recovery.img
+            vendor_boot.img
+            vbmeta.img
+            vendor_dlkm.img
+            system_dlkm.img
+            system.img
+            vendor.img
+          )
+
+          for image in "${required_images[@]}"; do
+            if [[ ! -f "$image" ]]; then
+              echo "::error::Required release asset is missing: $image"
+              exit 1
+            fi
+          done
+
+          zip -q -9 "${{ env.latest_shortversion }}_system.zip" system.img
+          zip -q -9 "${{ env.latest_shortversion }}_vendor.zip" vendor.img
+          rm -f system.img vendor.img
 
       - name: Update current version
         if: env.need_update == 1
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git pull origin ${{github.ref}} --ff-only
-          echo ${{ env.latest_version }} > current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}
-          git add current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}
+          git pull origin "${GITHUB_REF_NAME}" --ff-only
+          printf '%s\n' "${{ env.latest_version }}" > "current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}"
+          git add "current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}"
           git commit -m "${{ matrix.model }}: ${{ env.latest_shortversion }}"
-          git tag "${{ env.latest_shortversion }}_${{ matrix.csc }}_${{ matrix.omc }}"
 
       - name: Push changes to repo
         if: env.need_update == 1
         uses: ad-m/github-push-action@master
         with:
-          tags: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload release assets
@@ -245,15 +275,15 @@ jobs:
           body_path: versions.txt
           tag_name: "${{ env.latest_shortversion }}_${{ matrix.csc }}_${{ matrix.omc }}"
           name: "${{ env.latest_shortversion }} - ${{ matrix.model }} - ${{ matrix.csc }} - ${{ matrix.omc }}"
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
           files: |
-            ${{ env.bl_tar }}
-            ${{ env.cp_tar }}
-            ${{ env.home_csc_tar }}
-            ${{ env.latest_shortversion }}_kernel.tar
-            ${{ env.pit_file }}
-            ${{ env.latest_shortversion }}_patched_vbmeta.tar
-            ${{ env.latest_shortversion }}_patched_fastboot.tar
-            ${{ env.latest_shortversion }}_init_boot.tar
+            boot.img
+            dtbo.img
+            init_boot.img
+            recovery.img
+            vendor_boot.img
+            vbmeta.img
+            vendor_dlkm.img
+            system_dlkm.img
+            ${{ env.latest_shortversion }}_system.zip
             ${{ env.latest_shortversion }}_vendor.zip
-            ${{ env.latest_shortversion }}_vendor_dlkm.zip
