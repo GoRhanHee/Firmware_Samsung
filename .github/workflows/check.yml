@@ -187,6 +187,9 @@ jobs:
           super_member="$(archive_member super.img.lz4)"
           if [[ -n "$super_member" ]]; then
             tar -xOf "$AP_TAR" "$super_member" > super.img.lz4
+            # Match the original workflow: AP is no longer needed after
+            # super.img.lz4 has been copied, and keeping it wastes runner disk.
+            rm -f "$AP_TAR"
             lz4 -d super.img.lz4 super.img
             rm -f super.img.lz4
 
