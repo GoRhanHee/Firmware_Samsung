@@ -164,7 +164,7 @@ jobs:
             echo "::warning::${image} was not found in the downloaded firmware"
           }
 
-          for image in boot.img dtbo.img init_boot.img recovery.img vendor_boot.img system.img vendor.img; do
+          for image in boot.img dtbo.img init_boot.img recovery.img vendor_boot.img; do
             extract_image "$image"
           done
 
@@ -196,14 +196,17 @@ jobs:
               rm -f super.raw.img
             fi
 
+            # system, vendor, vendor_dlkm, and system_dlkm are all logical
+            # partitions stored in super.img. Extract each one from super.
             for partition in system vendor; do
-              if [[ ! -f "${partition}.img" ]] && ! ./tools/lpunpack -p "$partition" super.img .; then
+              rm -f "${partition}.img"
+              if ! ./tools/lpunpack -p "$partition" super.img .; then
                 echo "::warning::${partition}.img was not found in super.img"
               fi
             done
 
             # vendor_dlkm and system_dlkm are EROFS logical partitions.
-            # Always extract them from super instead of taking a direct AP image.
+            # Preserve the extracted images without sparse conversion.
             for partition in vendor_dlkm system_dlkm; do
               rm -f "${partition}.img"
               if ! ./tools/lpunpack -p "$partition" super.img .; then
