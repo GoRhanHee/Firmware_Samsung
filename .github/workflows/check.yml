@@ -256,25 +256,11 @@ jobs:
             fi
           done
 
-          zip -q -9 "${{ env.latest_shortversion }}_system.zip" system.img
-          zip -q -9 "${{ env.latest_shortversion }}_vendor.zip" vendor.img
+          # GitHub limits each release asset to 2 GiB. Keep every split ZIP
+          # volume below that limit so the complete archive can be uploaded.
+          zip -q -9 -s 1900m "${{ env.latest_shortversion }}_system.zip" system.img
+          zip -q -9 -s 1900m "${{ env.latest_shortversion }}_vendor.zip" vendor.img
           rm -f system.img vendor.img
-
-      - name: Update current version
-        if: env.need_update == 1
-        run: |
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git pull origin "${GITHUB_REF_NAME}" --ff-only
-          printf '%s\n' "${{ env.latest_version }}" > "current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}"
-          git add "current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}"
-          git commit -m "${{ matrix.model }}: ${{ env.latest_shortversion }}"
-
-      - name: Push changes to repo
-        if: env.need_update == 1
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload release assets
         if: env.need_update == 1
@@ -295,5 +281,21 @@ jobs:
             vbmeta.img
             vendor_dlkm.img
             system_dlkm.img
-            ${{ env.latest_shortversion }}_system.zip
-            ${{ env.latest_shortversion }}_vendor.zip
+            ${{ env.latest_shortversion }}_system.*
+            ${{ env.latest_shortversion }}_vendor.*
+
+      - name: Update current version
+        if: env.need_update == 1
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git pull origin "${GITHUB_REF_NAME}" --ff-only
+          printf '%s\n' "${{ env.latest_version }}" > "current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}"
+          git add "current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}"
+          git commit -m "${{ matrix.model }}: ${{ env.latest_shortversion }}"
+
+      - name: Push changes to repo
+        if: env.need_update == 1
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
