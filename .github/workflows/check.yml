@@ -33,6 +33,18 @@ jobs:
             csc: "KOO"
             omc: "OKR"
             imei: "351747951234567"
+          - model: "SM-X716B"
+            csc: "EUX"
+            omc: "OXM"
+            imei: "353439961234567"
+          - model: "SM-X816B"
+            csc: "EUX"
+            omc: "OXM"
+            imei: "350635071234560"
+          - model: "SM-X916B"
+            csc: "EUX"
+            omc: "OXM"
+            imei: "350836531234568"
 
     steps:
       - name: Checkout repo
