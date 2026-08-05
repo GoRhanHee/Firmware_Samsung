@@ -44,7 +44,7 @@ jobs:
           - model: "SM-X916B"
             csc: "EUX"
             omc: "OXM"
-            imei: "350836531234568"
+            imei: "350836530109688"
 
     steps:
       - name: Checkout repo
