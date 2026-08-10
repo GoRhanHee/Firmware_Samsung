@@ -17,6 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         include:          
+          - model: "SM-F731N"
+            csc: "KOO"
+            omc: "OKR"
+            imei: "350186701234562"
           - model: "SM-F946N"
             csc: "KOO"
             omc: "OKR"
