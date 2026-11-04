@@ -49,6 +49,10 @@ jobs:
             csc: "EUX"
             omc: "OXM"
             imei: "350836530109688"
+          - model: "SM-S928Q"
+            csc: "SJP"
+            omc: "SJP"
+            imei: "350972960121206"
 
     steps:
       - name: Checkout repo
