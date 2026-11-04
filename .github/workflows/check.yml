@@ -63,7 +63,7 @@ jobs:
       - name: Compare latest version with current version
         run: |
           need_update=0
-          latest="$(curl --fail --retry 5 --retry-delay 5 --silent http://fota-cloud-dn.ospserver.net/firmware/${{ matrix.csc }}/${{ matrix.model }}/version.xml | grep latest | sed 's/^[^>]*>//' | sed 's/<.*//')"
+          latest="$(curl --fail --retry 5 --retry-delay 5 --silent --show-error -A 'Kies2.0_FUS' https://fota-cloud-dn.ospserver.net/firmware/${{ matrix.csc }}/${{ matrix.model }}/version.xml | grep latest | sed 's/^[^>]*>//' | sed 's/<.*//')"
           latest_short="$(echo "$latest" | cut -d'/' -f1)"
           latest_csc="$(echo "$latest" | cut -d'/' -f2)"
           current="$(cat "current.${{ matrix.model }}_${{ matrix.csc }}_${{ matrix.omc }}" 2>/dev/null || true)"
@@ -74,6 +74,7 @@ jobs:
           echo "need_update=$need_update" >> $GITHUB_ENV
 
       - name: Free up workflow space
+        if: env.need_update == 1
         run: |
           curl -L -o util_free_space.sh https://raw.githubusercontent.com/apache/arrow/main/ci/scripts/util_free_space.sh
           chmod +x util_free_space.sh
