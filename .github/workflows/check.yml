@@ -52,7 +52,7 @@ jobs:
           - model: "SM-S928N"
             csc: "KOO"
             omc: "OKR"
-            imei: "35395635"
+            imei: "353956351234568"
           - model: "SM-S928Q"
             csc: "SJP"
             omc: "SJP"
