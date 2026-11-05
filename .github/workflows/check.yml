@@ -101,13 +101,15 @@ jobs:
 
       - name: Fetch firmware
         if: env.need_update == 1
+        env:
+          FUS_IMEI: ${{ matrix.model == 'SM-S928N' && secrets.S928N_FUS_IMEI || matrix.imei }}
         run: |
           source py_env/bin/activate
           mkdir "${{ matrix.model }}_${{ matrix.csc }}"
           # https://github.com/ExtremeXT/ExtremeROM/blob/v2.6.1/scripts/download_fw.sh#L169-L192
           C=1
           while true; do
-              samloader -m ${{ matrix.model }} -r ${{ matrix.csc }} -i ${{ matrix.imei }} download -O "${{ matrix.model }}_${{ matrix.csc }}" || true
+              samloader -m ${{ matrix.model }} -r ${{ matrix.csc }} -i "$FUS_IMEI" download -O "${{ matrix.model }}_${{ matrix.csc }}" || true
               ZIP_FILE="$(find "${{ matrix.model }}_${{ matrix.csc }}" -name "*.zip" | sort -r | head -n 1)"
               if [[ ! "$ZIP_FILE" ]] || [[ ! -f "$ZIP_FILE" ]]; then
                   if [[ "$C" -gt 10 ]]; then
