@@ -57,6 +57,10 @@ jobs:
             csc: "SJP"
             omc: "SJP"
             imei: "350972960121206"
+          - model: "SM-S948N"
+            csc: "KOO"
+            omc: "OKR"
+            imei: "35158136" # TAC; samloader generates and validates the IMEI.
 
     steps:
       - name: Checkout repo
