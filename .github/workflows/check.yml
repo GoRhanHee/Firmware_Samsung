@@ -60,7 +60,7 @@ jobs:
           - model: "SM-S948N"
             csc: "KOO"
             omc: "OKR"
-            imei: "35158136" # TAC; samloader generates and validates the IMEI.
+            imei: "351581361234564"
 
     steps:
       - name: Checkout repo
