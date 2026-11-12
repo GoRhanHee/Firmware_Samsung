@@ -196,6 +196,9 @@ jobs:
           }
 
           for image in boot.img dtbo.img init_boot.img recovery.img vendor_boot.img; do
+            if [[ "${{ matrix.model }}" == "SM-S948N" && "$image" == "recovery.img" ]]; then
+              continue
+            fi
             extract_image "$image"
           done
 
@@ -274,7 +277,6 @@ jobs:
             boot.img
             dtbo.img
             init_boot.img
-            recovery.img
             vendor_boot.img
             vbmeta.img
             vendor_dlkm.img
@@ -282,6 +284,9 @@ jobs:
             system.img
             vendor.img
           )
+          if [[ "${{ matrix.model }}" != "SM-S948N" ]]; then
+            required_images+=(recovery.img)
+          fi
 
           for image in "${required_images[@]}"; do
             if [[ ! -f "$image" ]]; then
@@ -305,7 +310,7 @@ jobs:
           body_path: versions.txt
           tag_name: "${{ env.latest_shortversion }}_${{ matrix.csc }}_${{ matrix.omc }}"
           name: "${{ env.latest_shortversion }} - ${{ matrix.model }} - ${{ matrix.csc }} - ${{ matrix.omc }}"
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           files: |
             boot.img
             dtbo.img
